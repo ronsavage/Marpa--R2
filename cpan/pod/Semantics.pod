@@ -310,7 +310,7 @@ is determined as follows:
 is empty (that is, has a zero-length RHS),
 then the empty alternative's semantics are used.
 
-=item * 
+=item *
 In the remaining case,
 two or more of the rule alternatives have different action names,
 but none of the alternatives has a zero-length RHS.
@@ -353,7 +353,7 @@ an action is not blessed.
 The implicit action itself cannot be blessed --
 an attempt to do so is a fatal error.
 
-Explicit blessings are made using 
+Explicit blessings are made using
 the C<bless> adverb.
 The C<bless> adverb is allowed
 
@@ -436,6 +436,46 @@ a C<bless_package> is required,
 and failure to specify one results in
 a fatal error.
 
+Given this fragment of BNF:
+
+    :start  ::= json
+
+    json    ::= object action => ::first
+                | array action => ::first
+
+    object  ::= ('{') members ('}') bless => hash
+
+And this Perl:
+
+    my($recce) = Marpa::R2::Scanless::G -> new
+    ({
+        bless_package => 'Some::Package',
+        source        => \$bnf,
+    });
+
+Then the effect of the C<object> reserved action name C<< action => ::first >>
+combined with C<< bless => hash >> is to force the result of that rule into the
+package name C<Some::Package::hash> when the rule is triggered. Hence we can do:
+
+	my($value_ref) = $recce -> value;
+
+	die "Parse failed\n" if (! defined $value_ref);
+
+	my($type) = ref $value_ref;
+
+	if ($type eq 'Some::Package::hash')
+	{
+		# Process $value_ref.
+	}
+
+C<bless_package> should not be confused with the L<SLIF recognizer's
+C<semantics_package> named argument|Marpa::R2::Scanless::R/"semantics_package">
+that provides the namespace in which action function names are searched for.
+See below for details.
+
+It is not normal practise to use both C<bless_package> and C<semantics_package>
+in the same grammar.
+
 =head1 Explicit actions
 
 There are four kinds of explicit action names:
@@ -477,7 +517,7 @@ If the array descriptor is an empty pair of square brackets ("C<[]>"),
 then there are zero array item descriptors,
 and the value will be an empty array.
 Otherwise the array item descriptors are interpreted as lists
-and those lists are used to fill out the 
+and those lists are used to fill out the
 array.
 
 =over 4
@@ -493,7 +533,7 @@ Length is in characters.
 
 The C<lhs> array item descriptor puts
 a single-element list into the array.
-That one element will be the LHS symbol ID of 
+That one element will be the LHS symbol ID of
 the rule.
 Because of historical reasons,
 for a lexeme instance,
@@ -606,7 +646,7 @@ will do exactly the same thing.
 
 The value of the rule instance is that of the rule instance's first child.
 If there is no such child, the value is a Perl C<undef>.
-It is a fatal error if a 
+It is a fatal error if a
 RHS alternative with a C<::first> action
 is blessed.
 It is also a fatal error to use a C<::first> action
@@ -616,7 +656,7 @@ with a lexeme.
 
 The value of the rule or lexeme instance will be
 a Perl C<undef>.
-It is a fatal error if a 
+It is a fatal error if a
 RHS alternative with an C<::undef> action
 is blessed.
 
@@ -675,6 +715,31 @@ But it is usually good practice to keep
 Perl variables intended for use by Marpa's semantics
 in their own namespace,
 especially if the application is not small.
+
+Given this BNF:
+
+    object  ::= '{' '}'            action => do_empty_object
+                | '{' members '}'  action => do_object
+
+And this Perl:
+
+    Marpa::R2::Scanless::R -> new
+    ({
+        grammar           => $self -> grammar,
+        semantics_package => 'MarpaX::Demo::JSONParser::Actions',
+    });
+
+Then the effect of the C<object> action verb C<< action => do_empty_object >>
+combined with the C<semantics_package>, is to call the function
+C<MarpaX::Demo::JSONParser::Actions::do_empty_object> when the rule is triggered.
+
+C<semantics_package> should not be confused with the L<SLIF grammar's
+C<bless_package> named argument|Marpa::R2::Scanless::G/"bless_package">
+that names the class into which rule results are blessed.
+See above for details.
+
+It is not normal practise to use both C<bless_package> and C<semantics_package>
+in the same grammar.
 
 =head1 Resolving Perl identifiers to Perl names
 
@@ -854,7 +919,7 @@ Perl scalar actions be used only as constants.
 
 For example,
 assume that actions are in a package named C<My_Actions>,
-which contains a hash reference named C<empty_hash>, 
+which contains a hash reference named C<empty_hash>,
 
 =for Marpa::R2::Display
 ignore: 1
@@ -876,7 +941,7 @@ namespace will share the same hash object.
 The correct way to define an
 C<empty_hash> action that
 initializes an empty hash is as a rule
-evaluation closure 
+evaluation closure
 that returns C<{}>.
 
 =for Marpa::R2::Display
